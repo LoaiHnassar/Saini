@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuesday Night Blueprint ⚡</title>
+  
+  <!-- Tailwind CSS, Lucide Icons & Canvas Confetti -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * { user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    
+    .glow-cyan { box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.4); }
+    .glow-violet { box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.4); }
+    .glow-amber { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.4); }
+    .glow-emerald { box-shadow: 0 0 30px -5px rgba(16, 185, 129, 0.5); }
+    .glow-pink { box-shadow: 0 0 30px -5px rgba(236, 72, 153, 0.5); }
+    
+    .active-press:active { transform: scale(0.95); }
+    
+    .detail-reveal {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .detail-reveal.open {
+      max-height: 400px;
+      opacity: 1;
+      margin-top: 14px;
+    }
+
+    @keyframes pulse-subtle {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+    .pulse-card { animation: pulse-subtle 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen p-4 md:p-8 flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+  <canvas id="fireworks-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+  <!-- Backdrop Glow -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-96 bg-gradient-to-br from-cyan-600/20 via-violet-600/20 to-amber-600/20 blur-3xl -z-10 rounded-full"></div>
+
+  <div class="max-w-md mx-auto w-full space-y-5">
+
+    <!-- Header Section -->
+    <header class="text-center space-y-3 pt-2">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-widest glow-cyan">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> CONFIRMED • 25/08/2026 AT 8:00 PM
+      </div>
+      <h1 class="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-teal-200 to-violet-400">
+        IT'S A DATE <span onclick="triggerEasterEgg()" class="cursor-pointer active-press inline-block">⚡</span>
+      </h1>
+      <p class="text-neutral-400 text-xs font-semibold">Saini & Loai • Tap cards & spin the wheel for wildcards!</p>
+    </header>
+
+    <!-- ADHD Countdown Timer -->
+    <div class="bg-neutral-900/90 border border-cyan-500/40 rounded-3xl p-4 text-center glow-cyan space-y-1">
+      <div class="text-[10px] font-black uppercase tracking-widest text-neutral-400">T-MINUS UNTIL HANGOUT</div>
+      <div id="countdown" class="text-3xl font-black tracking-tight text-cyan-300 font-mono">00h 00m 00s</div>
+    </div>
+
+    <!-- Dopamine Slot Machine / Randomizer -->
+    <div class="bg-neutral-900/90 border border-pink-500/40 rounded-3xl p-4 text-center glow-pink space-y-3">
+      <div class="text-[10px] font-black uppercase tracking-widest text-pink-400">🎰 RANDOM TONIGHT WILDCARD</div>
+      <div id="slot-result" class="text-xs font-bold text-neutral-200 bg-neutral-950/80 p-3 rounded-2xl border border-neutral-800 min-h-[48px] flex items-center justify-center">
+        Tap button below to spin a rule!
+      </div>
+      <button onclick="spinWildcard()" class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 rounded-xl font-extrabold text-xs tracking-wider uppercase active-press text-white shadow-lg">
+        🎲 Spin Wildcard Rule
+      </button>
+    </div>
+
+    <!-- Gamified Progress Bar -->
+    <div class="space-y-1.5 bg-neutral-900/60 p-3 rounded-2xl border border-neutral-800">
+      <div class="flex justify-between text-[11px] font-bold text-neutral-400">
+        <span id="streak-label">⚡ STREAK: 0/3 REVEALED</span>
+        <span id="progress-text" class="text-cyan-400 font-extrabold">0% UNLOCKED</span>
+      </div>
+      <div class="w-full h-2.5 bg-neutral-800 rounded-full overflow-hidden p-0.5">
+        <div id="progress-bar" class="h-full w-0 bg-gradient-to-r from-cyan-400 via-violet-400 to-emerald-400 rounded-full transition-all duration-500"></div>
+      </div>
+    </div>
+
+    <!-- Timeline Cards -->
+    <div class="space-y-4">
+
+      <!-- Step 1: Pool -->
+      <div class="step-card pulse-card bg-neutral-900/80 border border-cyan-500/30 rounded-3xl p-5 space-y-2 glow-cyan cursor-pointer transition-all active-press" onclick="toggleStep(0, event)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+              <i data-lucide="circle-dot"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">8:00 PM</span>
+              <h2 class="font-extrabold text-base text-white">De Omgekeerde Wereld</h2>
+            </div>
+          </div>
+          <i data-lucide="chevron-down" id="chevron-0" class="w-5 h-5 text-neutral-500 transition-transform"></i>
+        </div>
+        <p class="text-xs text-neutral-400 pl-13">The Warm-up • Low Pressure Pool & Banter</p>
+        
+        <div class="detail-reveal" id="detail-0">
+          <div class="bg-neutral-950/90 border-l-4 border-cyan-400 p-3.5 rounded-xl text-xs text-neutral-300 space-y-2 mt-2">
+            <p>You picked 8:00 PM! Perfect timing. No experience required—I've got tips ready, but usually people who claim they're bad at pool end up winning anyway.</p>
+            <span class="inline-block px-2.5 py-1 bg-cyan-500/20 text-cyan-300 font-bold rounded-md text-[10px]">🎱 Chill Atmosphere Guaranteed</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Board Games -->
+      <div class="step-card locked opacity-50 bg-neutral-900/80 border border-violet-500/30 rounded-3xl p-5 space-y-2 glow-violet cursor-pointer transition-all active-press" id="step-1" onclick="toggleStep(1, event)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400">
+              <i data-lucide="dices"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-bold text-violet-400 uppercase tracking-widest">9:15 PM</span>
+              <h2 class="font-extrabold text-base text-white">Barrazza Café</h2>
+            </div>
+          </div>
+          <i data-lucide="lock" id="chevron-1" class="w-5 h-5 text-neutral-500 transition-transform"></i>
+        </div>
+        <p class="text-xs text-neutral-400 pl-13">Drinks + Broken Dutch Evaluation</p>
+        
+        <div class="detail-reveal" id="detail-1">
+          <div class="bg-neutral-950/90 border-l-4 border-violet-400 p-3.5 rounded-xl text-xs text-neutral-300 space-y-2 mt-2">
+            <p>A chill spot for board games and testing out my Dutch phrases. You get to officially grade my accent in real time.</p>
+            <span class="inline-block px-2.5 py-1 bg-violet-500/20 text-violet-300 font-bold rounded-md text-[10px]">🎲 Dutch Accent Test Included</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Walk -->
+      <div class="step-card locked opacity-50 bg-neutral-900/80 border border-amber-500/30 rounded-3xl p-5 space-y-2 glow-amber cursor-pointer transition-all active-press" id="step-2" onclick="toggleStep(2, event)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <i data-lucide="footprints"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">10:30 PM</span>
+              <h2 class="font-extrabold text-base text-white">Ghent Night Stroll</h2>
+            </div>
+          </div>
+          <i data-lucide="lock" id="chevron-2" class="w-5 h-5 text-neutral-500 transition-transform"></i>
+        </div>
+        <p class="text-xs text-neutral-400 pl-13">Sober Deep Talk & City Views</p>
+        
+        <div class="detail-reveal" id="detail-2">
+          <div class="bg-neutral-950/90 border-l-4 border-amber-400 p-3.5 rounded-xl text-xs text-neutral-300 space-y-2 mt-2">
+            <p>The best part. A quiet walk through Ghent city center to talk about yoga, NSDR, and life before my Spain trip on August 31st.</p>
+            <span class="inline-block px-2.5 py-1 bg-amber-500/20 text-amber-300 font-bold rounded-md text-[10px]">✨ Genuine Conversation</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Victory Box -->
+    <div id="victory-box" class="hidden p-5 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-500/40 rounded-3xl text-center space-y-2 glow-emerald transition-all duration-500">
+      <div class="text-3xl">🎉</div>
+      <h3 class="text-lg font-black text-emerald-300 uppercase tracking-wide">FULL BLUEPRINT UNLOCKED!</h3>
+      <p class="text-xs text-neutral-300">Ready for 8:00 PM at De Omgekeerde Wereld!</p>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-[11px] text-neutral-600 py-2">
+      Built with 3 vowels • LOAI • Ghent 2026
+    </footer>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Haptic Feedback Engine
+    function triggerHaptic() {
+      if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
+    }
+
+    // Sound Synthesizer
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playChime(freq, type = 'sine', duration = 0.15) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playFanfare() {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, i) => {
+        setTimeout(() => playChime(freq, 'triangle', 0.25), i * 120);
+      });
+    }
+
+    // Wildcard Randomizer Engine
+    const wildcards = [
+      "🎱 Loser of pool match buys first round!",
+      "🎲 Winner gets to select the first board game at Barrazza.",
+      "💬 Saini gets to ask 3 unanswerable deep questions on the walk.",
+      "🇳🇱 Loai must order one drink purely in broken Dutch.",
+      "🍦 Stop at a local spot for night ice cream during the stroll."
+    ];
+
+    function spinWildcard() {
+      triggerHaptic();
+      const el = document.getElementById('slot-result');
+      let spins = 0;
+      const interval = setInterval(() => {
+        el.innerText = wildcards[Math.floor(Math.random() * wildcards.length)];
+        playChime(300 + spins * 30, 'square', 0.05);
+        spins++;
+        if (spins > 10) {
+          clearInterval(interval);
+          playChime(600, 'triangle', 0.2);
+          confetti({ particleCount: 25, spread: 50 });
+        }
+      }, 80);
+    }
+
+    // Easter Egg Mechanics
+    let eggClicks = 0;
+    function triggerEasterEgg() {
+      eggClicks++;
+      playChime(500 + eggClicks * 100, 'sine', 0.1);
+      triggerHaptic();
+      if (eggClicks === 5) {
+        confetti({ particleCount: 150, spread: 120, origin: { y: 0.3 } });
+        alert("✨ SECRET UNLOCKED: Legendary Tuesday Vibes Activated!");
+        eggClicks = 0;
+      }
+    }
+
+    // Countdown Engine
+    const targetTime = new Date('2026-08-25T20:00:00');
+    function updateCountdown() {
+      const now = new Date();
+      const diff = targetTime - now;
+      if (diff <= 0) {
+        document.getElementById('countdown').innerText = "IT'S TIME! ⚡";
+        return;
+      }
+      const hrs = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
+      const mins = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+      const secs = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+      document.getElementById('countdown').innerText = `${hrs}h ${mins}m ${secs}s`;
+    }
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    // Timeline Unlock Mechanics
+    let unlocked = [true, false, false];
+    let opened = [false, false, false];
+
+    function toggleStep(index, event) {
+      if (!unlocked[index]) return;
+
+      triggerHaptic();
+      const detail = document.getElementById(`detail-${index}`);
+      const chevron = document.getElementById(`chevron-${index}`);
+      
+      opened[index] = !opened[index];
+
+      if (opened[index]) {
+        playChime(480 + index * 140, 'triangle');
+        detail.classList.add('open');
+        chevron.style.transform = 'rotate(180deg)';
+        
+        confetti({
+          particleCount: 35,
+          spread: 60,
+          origin: {
+            x: event.clientX / window.innerWidth,
+            y: event.clientY / window.innerHeight
+          }
+        });
+
+        if (index < 2 && !unlocked[index + 1]) {
+          unlocked[index + 1] = true;
+          const nextCard = document.getElementById(`step-${index + 1}`);
+          nextCard.classList.remove('opacity-50', 'locked');
+          nextCard.classList.add('pulse-card');
+          const nextIcon = document.getElementById(`chevron-${index + 1}`);
+          nextIcon.setAttribute('data-lucide', 'chevron-down');
+          lucide.createIcons();
+        }
+      } else {
+        playChime(300, 'sine');
+        detail.classList.remove('open');
+        chevron.style.transform = 'rotate(0deg)';
+      }
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const count = opened.filter(Boolean).length;
+      const pct = Math.round((count / 3) * 100);
+      document.getElementById('progress-bar').style.width = `${pct}%`;
+      document.getElementById('progress-text').innerText = `${pct}% UNLOCKED`;
+      document.getElementById('streak-label').innerText = `⚡ STREAK: ${count}/3 REVEALED`;
+
+      if (count === 3) {
+        setTimeout(() => {
+          document.getElementById('victory-box').classList.remove('hidden');
+          playFanfare();
+          confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
+        }, 300);
+      }
+    }
+  </script>
+</body>
+</html>
